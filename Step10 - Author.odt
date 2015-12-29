@@ -1,0 +1,108 @@
+Dodanie strony wyœwietlaj¹cej posty przypisane do autora
+
+1. Dodajmy nowy routing:
+src\BlogBundle\Resources\config\routing.yml
+
+blog_author:
+    path:     /author/{email}
+    defaults: { _controller: "BlogBundle:Post:author" }
+
+2. Dodanie metody
+src\BlogBundle\Controller\PostController.php
+
+    public function authorAction($email)
+    {
+        $em = $this->getDoctrine()->getManager();
+        
+        $entities = $em->getRepository('BlogBundle:Post')->findBy(array('author_email' => $email));
+        
+        $categories = $em->getRepository('BlogBundle:Category')->getWithPosts();
+        
+        $tags = $em->getRepository('BlogBundle:Tag')->getWithPosts();
+        
+        $archives = $em->getRepository('BlogBundle:Post')->getArchives();
+        
+        $recent_posts = $em->getRepository('BlogBundle:Post')->findBy(array(), array(), 10);
+        
+        return $this->render('BlogBundle:Post:author.html.twig', array(
+            'author' => $email,
+            'entities' => $entities,
+            'categories' => $categories,
+            'tags' => $tags,
+            'archives' => $archives,
+            'recent_posts' => $recent_posts,
+        ));
+    }
+
+3. Dodanie template
+src\BlogBundle\Resources\views\Post\author.html.twig 
+
+{% extends 'BlogBundle::base.html.twig' %}
+
+{% block title %}Blog{% endblock %}
+
+{% block stylesheets %}{% endblock %}
+
+{% block javascripts %}{% endblock %}
+
+{% block body -%}
+    
+<div class="container">
+    <div class="row">    
+    	<div class="col-lg-12">
+            <div class="page-header">
+                <h2>Author: {{ author }}</h2>
+            </div>
+            <ul class="breadcrumb">
+                <li><a href="{{ path('blog_homepage') }}">Start</a></li>
+                <li><a href="{{ path('post') }}">Blog</a></li>
+                <li class="active">Author: {{ author }}</li>
+            </ul>
+    	</div>
+    </div>
+    <div class="row">
+        <div class="col-md-8">
+        {% for entity in entities %}
+            <h2><a href="{{ path('post_show', { 'id': entity.id, 'category': entity.category.slug, 'title': entity.titleslug }) }}">{{ entity.title|title|raw }}</a></h2>
+            <p>
+                <i class="fa fa-calendar"></i> <a href="#">{% if entity.publishedat %}{{ entity.publishedat|date('l, F j, Y') }}{% endif %}</a> | 
+                <i class="fa fa-user"></i> <a href="{{ path('blog_author', { 'email': entity.authoremail }) }}">{{ entity.authoremail }}</a> |
+                <i class="fa fa-share-alt"></i> <a href="{{ path('blog_category', { 'slug': entity.category.slug }) }}">{{ entity.category }}</a>
+            </p>
+            <p>
+                {{ entity.excerpt|raw|slice(0, 300) }}
+                {{ entity.excerpt|length > 300 ? '[...]' : ''}}
+                {#{{ entity.excerpt|length > 300 ? entity.excerpt|raw|slice(0,300) ~ '[...]' : entity.excerpt|raw }}#}
+            </p>
+            <a class="pull-right btn btn-primary" href="{{ path('post_show', { 'id': entity.id, 'category': entity.category.slug, 'title': entity.titleslug }) }}">Read More <i class="fa fa-angle-right"></i></a>
+            <p>Tag: 
+            {% for tag in entity.tags %}
+                <a class="btn btn-default btn-xs" href="{{ path('blog_tag', { 'slug': tag.slug }) }}">{{ tag.name }}</a>
+            {% endfor %} 
+            </p>
+            <div class="clearfix"></div>
+            <hr/>
+        {% endfor %} 
+        </div>
+        <div class="col-md-4">
+            {{ include('BlogBundle:Post:_sidebar.html.twig', { 'categories': categories, 'tags': tags, 'archives': archives }) }}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+4. Dodanie linku przekierowuj¹cego do postów danego autora:
+
+src\BlogBundle\Resources\views\Category\show.html.twig 
+src\BlogBundle\Resources\views\Post\archive.html.twig
+src\BlogBundle\Resources\views\Post\author.html.twig 
+src\BlogBundle\Resources\views\Post\index.html.twig 
+src\BlogBundle\Resources\views\Post\show.html.twig 
+src\BlogBundle\Resources\views\Tag\show.html.twig 
+
+            <p>
+                <i class="fa fa-calendar"></i> <a href="{{ path('post_show', { 'id': entity.id, 'category': entity.category.slug, 'title': entity.titleslug }) }}">{% if entity.publishedat %}{{ entity.publishedat|date('l, F j, Y') }}{% endif %}</a> | 
+                <i class="fa fa-user"></i> <a href="{{ path('blog_author', { 'email': entity.authoremail }) }}">{{ entity.authoremail }}</a> | 
+                <i class="fa fa-share-alt"></i> <a href="{{ path('blog_category', { 'slug': entity.category.slug }) }}">{{ entity.category }}</a>
+            </p>
